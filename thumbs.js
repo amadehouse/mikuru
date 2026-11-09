@@ -28,9 +28,19 @@ async function download(imgUrl, id) {
 }
 
 // --- sources par plateforme ---------------------------------------------
-async function tiktok(url) {
-  const j = await fetchJson("https://www.tiktok.com/oembed?url=" + encodeURIComponent(url));
+// Lien TikTok propre, sans ?q=…&t=… (les paramètres de partage font parfois échouer les API)
+const tiktokCanonical = (url, meta) => meta.handle && meta.id ? `https://www.tiktok.com/${meta.handle}/video/${meta.id}` : url;
+async function tiktok(url, meta) {
+  const j = await fetchJson("https://www.tiktok.com/oembed?url=" + encodeURIComponent(tiktokCanonical(url, meta)));
+  if (!j.thumbnail_url) throw new Error("oembed sans vignette : " + JSON.stringify(j).slice(0, 160));
   return { img: j.thumbnail_url, title: j.title };
+}
+// Secours : tikwm.com, service tiers gratuit (peut disparaître ou limiter un jour)
+async function tikwm(url, meta) {
+  const j = await fetchJson("https://www.tikwm.com/api/?url=" + encodeURIComponent(tiktokCanonical(url, meta)));
+  const img = j.data?.origin_cover || j.data?.cover;
+  if (!img) throw new Error("tikwm sans vignette : " + JSON.stringify(j).slice(0, 160));
+  return { img, title: j.data?.title };
 }
 async function twitter(meta) {
   if (!meta.id) throw new Error("id tweet manquant");
@@ -47,7 +57,9 @@ async function ytdlp(url) {
   const args = ["-j", "--no-warnings", "--no-playlist", "--skip-download"];
   if (process.env.YTDLP_COOKIES && fs.existsSync(process.env.YTDLP_COOKIES)) args.push("--cookies", process.env.YTDLP_COOKIES);
   args.push(url);
-  const { stdout } = await run("yt-dlp", args, { timeout: 60000, maxBuffer: 8 * 1024 * 1024 });
+  let stdout;
+  try { ({ stdout } = await run("yt-dlp", args, { timeout: 60000, maxBuffer: 8 * 1024 * 1024 })); }
+  catch (e) { throw new Error("yt-dlp : " + String(e.stderr || e.message).trim().split("\n").slice(-2).join(" | ").slice(0, 300)); }
   const j = JSON.parse(stdout.split("\n").find(Boolean));
   const best = (j.thumbnails || []).filter(t => t.url).sort((a, b) => (b.width || 0) - (a.width || 0))[0];
   return { img: best?.url || j.thumbnail, title: j.title };
@@ -59,20 +71,21 @@ export async function fetchCover(reelId, { force = false } = {}) {
   if (r.coverStatus === "manual" && !force) return r; // capture mise à la main : on ne l'écrase pas
   const meta = parseUrl(r.url);
   const attempts = [];
-  if (meta.platform === "tiktok") attempts.push(() => tiktok(r.url));
-  if (meta.platform === "x") attempts.push(() => twitter(meta));
-  if (meta.platform === "youtube") attempts.push(() => youtube(meta));
-  attempts.push(() => ytdlp(r.url)); // fallback universel + Instagram
+  if (meta.platform === "tiktok") attempts.push(["oembed", () => tiktok(r.url, meta)], ["tikwm", () => tikwm(r.url, meta)]);
+  if (meta.platform === "x") attempts.push(["fxtwitter", () => twitter(meta)]);
+  if (meta.platform === "youtube") attempts.push(["youtube", () => youtube(meta)]);
+  attempts.push(["yt-dlp", () => ytdlp(meta.platform === "tiktok" ? tiktokCanonical(r.url, meta) : r.url)]); // fallback universel + Instagram
 
-  for (const attempt of attempts) {
+  for (const [name, attempt] of attempts) {
     try {
       const { img, title } = await attempt();
-      if (!img) continue;
+      if (!img) { console.warn(`[thumbs] ${r.platform} ${r.id} (${name}): pas d'image`); continue; }
       const file = await download(img, r.id);
+      console.log(`[thumbs] ${r.platform} ${r.id}: vignette OK via ${name}`);
       if (!r.title && title) r.title = String(title).replace(/#\S+/g, "").replace(/\s+/g, " ").trim().slice(0, 120);
       return setCover(r.id, file, "ok");
     } catch (e) {
-      console.warn(`[thumbs] ${r.platform} ${r.id}: ${e.message?.split("\n")[0]}`);
+      console.warn(`[thumbs] ${r.platform} ${r.id} (${name}): ${e.message}`);
     }
   }
   r.coverStatus = "failed";
