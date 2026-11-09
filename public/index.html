@@ -219,11 +219,9 @@ main{max-width:760px;margin:0 auto;padding:10px 14px 0}
   <svg class="crown" viewBox="0 0 64 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" style="width:54px;height:40px;color:var(--gold)"><path d="M6 40h52M8 36 4 14l14 10 14-18 14 18 14-10-4 22z"/></svg>
   <h1 style="font-size:52px;font-style:italic;font-weight:700;color:var(--gold)">La Cour</h1>
   <div class="motto" style="font-family:Cormorant,serif;font-style:italic;color:var(--ivory-dim)">qui se présente ?</div>
-  <div class="who" id="who"></div>
-  <input id="pin" type="password" inputmode="numeric" placeholder="code" autocomplete="current-password">
-  <button class="go" id="loginBtn">Entrer</button><div class="bad" id="loginErr"></div>
+  <div class="who" id="who"></div><div class="bad" id="loginErr"></div>
 </div></div>
-<section class="crest"><button class="logout" id="logoutBtn">sortir</button>
+<section class="crest"><button class="logout" id="logoutBtn">changer</button>
   <svg class="crown" viewBox="0 0 64 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 40h52M8 36 4 14l14 10 14-18 14 18 14-10-4 22z"/><circle cx="4" cy="12" r="2.5" fill="currentColor"/><circle cx="32" cy="5" r="2.5" fill="currentColor"/><circle cx="60" cy="12" r="2.5" fill="currentColor"/><circle cx="32" cy="27" r="3" fill="currentColor" stroke="none"/></svg>
   <h1>Irina</h1>
   <div class="motto">Reine suprême du cosplay <b>·</b> archives de la cour</div>
@@ -303,7 +301,7 @@ function render(){
   else if(home) html=state.q.trim()?renderSearch():renderHome();
   else if(state.screen==="list") html=renderList();
   else html=renderReels();
-  $("#view").innerHTML=html; wireView($("#view")); if(detail)renderDetail(); if(user)resolveNames();
+  $("#view").innerHTML=html; wireView($("#view")); if(detail)renderDetail();
 }
 const CHEV='<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>';
 function pageHead(title,crumb,count){
@@ -373,7 +371,7 @@ function renderDetail(){
   host.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeDetail));
   wireView(host);
   if(keep){const ta=host.querySelector("[data-notes]");if(ta){ta.value=keep.v;ta.focus();try{ta.setSelectionRange(keep.p,keep.p);}catch(e){}}}
-  if(user)resolveNames();
+ 
 }
 function card(r,inbox=false){
   const myR=r.ratings?.[uid],avg=avgRating(r);
@@ -506,12 +504,10 @@ if(location.hash==="#ajouter")setTimeout(()=>openModal("add"),300);
 window.addEventListener("hashchange",()=>{if(location.hash==="#ajouter")openModal("add");});
 
 /* ---------- connexion ---------- */
-let pickedUser=null;
-function showLogin(){clearInterval(pollTimer);$("#login").classList.remove("hidden");api("/users").then(d=>{users=d.users;pickedUser=pickedUser||users[0];$("#who").innerHTML=users.map(u=>`<button type="button" data-u="${esc(u)}" class="${u===pickedUser?"on":""}">${esc(u)}</button>`).join("");
-  $("#who").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{pickedUser=b.dataset.u;$("#who").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));$("#pin").focus();}));}).catch(()=>{});}
-async function doLogin(){$("#loginErr").textContent="";try{const d=await api("/login",{method:"POST",body:{user:pickedUser,pin:$("#pin").value}});uid=d.user;$("#pin").value="";$("#login").classList.add("hidden");start();}
-  catch(e){$("#loginErr").textContent=e.code==="bad_pin"?"Mauvais code.":"Connexion impossible.";}}
-$("#loginBtn").addEventListener("click",doLogin);$("#pin").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+function showLogin(){clearInterval(pollTimer);$("#login").classList.remove("hidden");api("/users").then(d=>{users=d.users;$("#who").innerHTML=users.map(u=>`<button type="button" data-u="${esc(u)}">${esc(u)}</button>`).join("");
+  $("#who").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>doLogin(b.dataset.u)));}).catch(()=>{});}
+async function doLogin(u){$("#loginErr").textContent="";try{const d=await api("/login",{method:"POST",body:{user:u}});uid=d.user;$("#login").classList.add("hidden");start();}
+  catch(e){$("#loginErr").textContent="Impossible d'entrer, réessaie.";}}
 $("#logoutBtn").addEventListener("click",async()=>{await api("/logout",{method:"POST"}).catch(()=>{});uid=null;reels=[];render();showLogin();});
 function start(){refresh();clearInterval(pollTimer);pollTimer=setInterval(()=>{if(!document.hidden&&!modal)refresh();},10000);}
 render();showStatus("Ouverture des archives…");
