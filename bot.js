@@ -87,7 +87,12 @@ export async function startBot() {
         const files = [];
         if (r.cover) { files.push(new AttachmentBuilder(path.join(store.COVERS_DIR, r.cover), { name: "cover" + path.extname(r.cover) })); embed.setImage("attachment://cover" + path.extname(r.cover)); }
         if (SITE) embed.addFields({ name: "Archives", value: SITE });
-        await msg.reply({ embeds: [embed], files, allowedMentions: { repliedUser: false } });
+        const greeting = /^irina$/i.test(addedBy)
+          ? "👑 **GLOIRE À LA REINE SUPRÊME IRINA**, C'EST UN PRIVILÈGE DE VOUS RENDRE SERVICE 👑"
+          : /^esteban$/i.test(addedBy)
+            ? "Tu me déranges bouffon, mais j'le fais quand même."
+            : "C'est rangé.";
+        await msg.reply({ content: greeting, embeds: [embed], files, allowedMentions: { repliedUser: false } });
       }
       await msg.reactions.cache.get("⏳")?.users.remove(client.user.id).catch(() => {});
       await msg.react("👑").catch(() => {});
