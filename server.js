@@ -19,8 +19,8 @@ if (process.env.YTDLP_COOKIES_B64) {
 const PUBLIC_DIR = path.resolve("public");
 const SECRET = process.env.SESSION_SECRET || (console.warn("⚠ SESSION_SECRET manquant : sessions perdues à chaque redémarrage"), crypto.randomBytes(32).toString("hex"));
 
-// USERS="Esteban:1234,Irina:5678"
-const USERS = Object.fromEntries((process.env.USERS || "Esteban:1234,Irina:5678").split(",").map(s => s.trim()).filter(Boolean).map(s => { const i = s.indexOf(":"); return [s.slice(0, i).trim(), s.slice(i + 1).trim()]; }));
+// USERS="Esteban,Irina" (un éventuel ":code" après le prénom est ignoré)
+const USERS = Object.fromEntries((process.env.USERS || "Esteban,Irina").split(",").map(s => s.split(":")[0].trim()).filter(Boolean).map(n => [n, ""]));
 
 // --- sessions (cookie signé HMAC) -----------------------------------------
 const sign = v => crypto.createHmac("sha256", SECRET).update(v).digest("base64url");
@@ -30,7 +30,6 @@ function readUser(req) {
   const [p, s] = m[1].split("."); if (!p || !s || sign(p) !== s) return null;
   try { const { u } = JSON.parse(Buffer.from(p, "base64url").toString()); return USERS[u] !== undefined ? u : null; } catch { return null; }
 }
-const safeEq = (a, b) => a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
 // --- helpers --------------------------------------------------------------
 const json = (res, code, body, headers = {}) => { res.writeHead(code, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...headers }); res.end(JSON.stringify(body)); };
@@ -59,8 +58,8 @@ const server = http.createServer(async (req, res) => {
 
     // Auth
     if (p === "/api/login" && req.method === "POST") {
-      const { user, pin } = JSON.parse((await readBody(req, 4096)).toString() || "{}");
-      if (!USERS[user] || !safeEq(String(pin || ""), USERS[user])) return err(res, 401, "bad_pin");
+      const { user } = JSON.parse((await readBody(req, 4096)).toString() || "{}");
+      if (USERS[user] === undefined) return err(res, 401, "unknown_user");
       return json(res, 200, { user }, { "Set-Cookie": `cour=${makeToken(user)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000${req.headers["x-forwarded-proto"] === "https" ? "; Secure" : ""}` });
     }
     if (p === "/api/logout" && req.method === "POST") return json(res, 200, { ok: true }, { "Set-Cookie": "cour=; Path=/; Max-Age=0" });
