@@ -80,6 +80,28 @@ const server = http.createServer(async (req, res) => {
       enqueueCover(r.id); // en arrière-plan
       return json(res, 201, { reel: r });
     }
+    // --- Cosplan ---
+    if (p === "/api/chars" && req.method === "GET") return json(res, 200, { chars: store.listChars() });
+    if (p === "/api/chars" && req.method === "POST") {
+      const body = JSON.parse((await readBody(req, 64 * 1024)).toString() || "{}");
+      return json(res, 201, { char: store.createChar(body, user) });
+    }
+    const mc = /^\/api\/chars\/([a-z0-9]+)(?:\/(ref))?$/.exec(p);
+    if (mc) {
+      const [, id, sub] = mc;
+      if (!store.getChar(id)) return err(res, 404, "not_found");
+      if (!sub && req.method === "PATCH") { const body = JSON.parse((await readBody(req, 64 * 1024)).toString() || "{}"); return json(res, 200, { char: store.updateChar(id, body, user) }); }
+      if (!sub && req.method === "DELETE") { store.removeChar(id); return json(res, 200, { ok: true }); }
+      if (sub === "ref" && req.method === "POST") {
+        const ct = (req.headers["content-type"] || "").split(";")[0];
+        const ext = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }[ct]; if (!ext) return err(res, 415, "unsupported_type");
+        let buf; try { buf = await readBody(req, 12 * 1024 * 1024); } catch { return err(res, 413, "too_large"); }
+        const file = `char-${id}-${Date.now().toString(36)}.${ext}`; fs.writeFileSync(path.join(store.COVERS_DIR, file), buf);
+        return json(res, 200, { char: store.setCharRef(id, file) });
+      }
+      if (sub === "ref" && req.method === "DELETE") return json(res, 200, { char: store.setCharRef(id, null) });
+    }
+
     const m = /^\/api\/reels\/([a-z0-9]+)(?:\/(cover|refetch))?$/.exec(p);
     if (m) {
       const [, id, sub] = m;
