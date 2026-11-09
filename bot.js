@@ -3,7 +3,7 @@
 //   ex : https://www.tiktok.com/@x/video/123  #perruque #inspi
 import path from "node:path";
 import * as store from "./lib/store.js";
-import { enqueueCover } from "./lib/thumbs.js";
+import { enqueueCover, coverFromImageUrl } from "./lib/thumbs.js";
 
 const URL_RE = /https?:\/\/(?:www\.|vm\.|vt\.|m\.|mobile\.)?(?:tiktok\.com|instagram\.com|twitter\.com|x\.com|youtube\.com|youtu\.be)\/\S+/gi;
 const strip = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -18,6 +18,25 @@ function tagsFrom(text) {
     else if (store.FORMAT.includes(t)) out.format.push(t);
   }
   return out;
+}
+
+const pathOf = u => { try { const x = new URL(u); return (x.hostname.replace(/^www\.|^m\./, "") + x.pathname).replace(/\/$/, ""); } catch { return u; } };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// Discord ajoute l'aperçu (embed) du lien une à quelques secondes après l'envoi du message.
+async function embedsOf(msg) {
+  for (let i = 0; i < 5; i++) {
+    if (msg.embeds?.length) return msg.embeds;
+    await sleep(1500);
+    try { msg = await msg.fetch(true); } catch { break; }
+  }
+  return msg.embeds || [];
+}
+function imageFromEmbeds(embeds, url, single) {
+  const e = embeds.find(e => e.url && pathOf(e.url) === pathOf(url)) || (single ? embeds[0] : null);
+  if (!e) return null;
+  const img = e.image?.proxyURL || e.image?.url || e.thumbnail?.proxyURL || e.thumbnail?.url || e.video?.proxyURL && null;
+  return img ? { img, title: e.title } : null;
 }
 
 export async function startBot() {
@@ -35,7 +54,7 @@ export async function startBot() {
     partials: [Partials.Channel, Partials.Message],
   });
 
-  client.once("ready", () => console.log(`[discord] connecté : ${client.user.tag}`));
+  client.once("clientReady", () => console.log(`[discord] connecté : ${client.user.tag}`));
 
   client.on("messageCreate", async msg => {
     try {
@@ -51,7 +70,11 @@ export async function startBot() {
 
       for (const url of urls) {
         const created = store.create({ url, title, ...tags, addedBy });
-        const r = (await enqueueCover(created.id)) || created;
+        let r = (await enqueueCover(created.id)) || created;
+        if (r.coverStatus !== "ok") {                      // plan B : l'aperçu que Discord a généré
+          const found = imageFromEmbeds(await embedsOf(msg), url, urls.length === 1);
+          if (found) r = (await coverFromImageUrl(r.id, found.img, found.title)) || r;
+        }
         const where = r.status === "classe"
           ? [...r.kind, ...r.cosplay, ...r.format].map(t => "`" + t + "`").join(" ")
           : "**Offrandes** (à classer)";
