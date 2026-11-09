@@ -1,0 +1,14 @@
+{
+  "name": "cour-irina",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "La Cour d'Irina — archives de reels cosplay : site, API, vignettes automatiques et bot Discord",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3"
+  }
+}
