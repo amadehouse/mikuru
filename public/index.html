@@ -136,8 +136,15 @@ main{max-width:760px;margin:0 auto;padding:10px 14px 0}
 .chip.c{border-color:rgba(255,79,154,.5);color:#ffb3d1}.chip.f{border-color:rgba(79,195,161,.5);color:#9fe3cd}
 .chip.k{background:var(--gold);border-color:var(--gold);color:var(--velvet);font-weight:600}
 .chip.clickable{cursor:pointer}
-.rating{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.rating .lbl{font-family:Cormorant,serif;font-style:italic;font-size:17px;color:var(--ivory-dim);min-width:68px}
+.ratings{display:flex;flex-direction:column;gap:2px}
+.ratings .rh{font-family:Cormorant,serif;font-style:italic;font-size:17px;color:var(--ivory-dim);margin-bottom:2px}
+.rating{display:flex;align-items:center;gap:4px 10px;flex-wrap:wrap;padding:6px 10px;margin:0 -10px;border-radius:12px}
+.rating.ctx{background:rgba(255,79,154,.1);border:1px solid rgba(255,79,154,.3)}
+.rating .lbl{font-family:Cormorant,serif;font-weight:600;font-size:18px;color:var(--ivory);min-width:96px}
+.sorts{display:flex;align-items:center;gap:6px;margin:-6px 0 14px;font-size:13px;color:var(--ivory-dim)}
+.sorts span{margin-right:2px}
+.sorts button{height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);color:var(--ivory-dim);font-size:13px}
+.sorts button.on{border-color:var(--fuchsia);color:var(--ivory);background:rgba(255,79,154,.18)}
 .gems{display:flex;gap:3px}
 .gems button{width:26px;height:30px;display:grid;place-items:center}
 .gems svg{width:16px;height:16px;fill:rgba(226,180,90,.18);stroke:var(--gold-deep);stroke-width:1;transition:transform .15s}
@@ -272,7 +279,7 @@ const coverUrl=r=>r.cover?"/covers/"+r.cover:null;
 
 /* ---------- état ---------- */
 let uid=null,users=[],assets=true,canWrite=null,reels=[],names={},modal=null,detail=null,pollTimer=null;
-let state={screen:"home",tab:"cosplay",cat:null,kind:"tous",q:""};
+let state={screen:"home",tab:"cosplay",cat:null,kind:"tous",sort:"recent",q:""};
 const dirtyNotes=new Map();
 
 /* ---------- utils ---------- */
@@ -287,7 +294,15 @@ function parseUrl(u){let platform="autre",handle="",id="";try{const url=new URL(
 const PF={tiktok:"Tk",instagram:"Ig",x:"X",youtube:"Yt",autre:"↗"};
 const PFNAME={tiktok:"TikTok",instagram:"Instagram",x:"X",youtube:"YouTube",autre:"Lien"};
 function nameOf(id){if(!id)return"la cour";if(id===uid)return"toi";return id;}
-function avgRating(r){const v=Object.values(r.ratings||{}).filter(n=>typeof n==="number");if(!v.length)return null;return Math.round(v.reduce((a,b)=>a+b,0)/v.length*10)/10;}
+const mean=v=>v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length*10)/10:null;
+// Note d'une catégorie (moyenne de vous deux) ; sans catégorie : moyenne des catégories notées.
+function avgRating(r,cat){
+  const cr=r.catRatings||{};
+  if(cat)return mean(Object.values(cr[cat]||{}).filter(n=>typeof n==="number"));
+  return mean(Object.keys(cr).map(c=>avgRating(r,c)).filter(x=>x!=null));
+}
+const myRating=(r,cat)=>r.catRatings?.[cat]?.[uid];
+const ctxCat=()=>state.screen==="reels"?state.cat:null;
 const isClassified=r=>((r.cosplay?.length||0)+(r.format?.length||0))>0&&r.status!=="a_classer";
 
 /* ---------- rendu ---------- */
@@ -330,12 +345,19 @@ function renderList(){
 }
 function filtered(){const q=state.q.trim().toLowerCase();return reels.filter(r=>{if(!isClassified(r))return false;
   const list=state.tab==="cosplay"?(r.cosplay||[]):(r.format||[]);if(!list.includes(state.cat))return false;
-  if(state.kind!=="tous"&&!(r.kind||[]).includes(state.kind))return false;return true;}).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));}
+  if(state.kind!=="tous"&&!(r.kind||[]).includes(state.kind))return false;return true;}).sort(sorter());}
+function sorter(){
+  const recent=(a,b)=>(b.createdAt||0)-(a.createdAt||0);
+  if(state.sort==="recent")return recent;
+  const val=state.sort==="mine"?r=>myRating(r,state.cat):r=>avgRating(r,state.cat);
+  return (a,b)=>{const x=val(a),y=val(b);if(x==null&&y==null)return recent(a,b);if(x==null)return 1;if(y==null)return -1;return y-x||recent(a,b);};
+}
 const countFor=(k,f)=>reels.filter(r=>isClassified(r)&&(r[f]||[]).includes(k)).length;
 function renderReels(){
   const items=filtered();
   return pageHead(LABEL[state.cat],state.tab==="cosplay"?"Cosplay":"Format",items.length)+
   `<div class="kinds"><button data-kind="tous" class="${state.kind==="tous"?"on":""}">Tous</button><button data-kind="inspi" class="${state.kind==="inspi"?"on":""}">Inspi</button><button data-kind="tuto" class="${state.kind==="tuto"?"on":""}">Tutorial</button></div>
+  <div class="sorts"><span>Trier</span><button data-sort="recent" class="${state.sort==="recent"?"on":""}">Récents</button><button data-sort="top" class="${state.sort==="top"?"on":""}">Mieux notés</button><button data-sort="mine" class="${state.sort==="mine"?"on":""}">Ma note</button></div>
   ${items.length?`<div class="grid">${items.map(tile).join("")}</div>`:`<div class="empty"><b>Le trône attend</b>Aucun reel en « ${LABEL[state.cat]} »${state.kind!=="tous"?" / "+LABEL[state.kind]:""}.</div>`}`;
 }
 function renderSearch(){
@@ -348,7 +370,7 @@ function renderInbox(inbox){
   ${inbox.length?`<div class="grid">${inbox.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(tile).join("")}</div>`:`<div class="empty"><b>La salle est vide</b>Tout a été rangé dans les archives.</div>`}`;
 }
 function tile(r){
-  const cu=coverUrl(r),avg=avgRating(r),kind=(r.kind||[])[0];
+  const cu=coverUrl(r),avg=avgRating(r,ctxCat()),kind=(r.kind||[])[0];
   return `<button class="tile" data-tile="${r.id}">
     ${cu?`<img src="${cu}" alt="" loading="lazy" onerror="this.remove()">`:`<div class="ph2">${PF[r.platform]||"↗"}</div>`}
     <div class="shade"></div>
@@ -377,18 +399,21 @@ function renderDetail(){
  
 }
 function card(r,inbox=false){
-  const myR=r.ratings?.[uid],avg=avgRating(r);
-  const others=Object.entries(r.ratings||{}).filter(([k])=>k!==uid);
+  const cats=[...(r.cosplay||[]),...(r.format||[])], ctx=ctxCat();
+  if(ctx&&cats.includes(ctx))cats.splice(cats.indexOf(ctx),1),cats.unshift(ctx);
+  const ratingRow=cat=>{const mine=myRating(r,cat),avg=avgRating(r,cat);
+    const others=Object.entries(r.catRatings?.[cat]||{}).filter(([k])=>k!==uid);
+    const gems=Array.from({length:10},(_,i)=>`<button data-rate="${i+1}" class="${mine>=i+1?"lit":""}" aria-label="${LABEL[cat]} : ${i+1} sur 10">${GEM}</button>`).join("");
+    return `<div class="rating ${cat===ctx?"ctx":""}" data-rcat="${cat}"><span class="lbl">${LABEL[cat]}</span><div class="gems">${gems}</div>
+      <span class="avg">${others.map(([k,v])=>`${esc(nameOf(k))} <b>${v}</b>`).join(" · ")}${avg!=null&&others.length?` · moy. <b>${avg}</b>`:""}</span></div>`;};
   const otherNotes=Object.entries(r.notes||{}).filter(([k,v])=>k!==uid&&v&&v.trim());
-  const gems=Array.from({length:10},(_,i)=>`<button data-rate="${i+1}" class="${myR>=i+1?"lit":""}" ${canWrite===false?"disabled":""} aria-label="${i+1} sur 10">${GEM}</button>`).join("");
   return `<article class="card" data-id="${r.id}">
     <div class="top"><div class="pf ${r.platform||"autre"}">${PF[r.platform]||"↗"}</div>
       <div style="min-width:0"><div class="ttl">${esc(r.title||r.handle||PFNAME[r.platform]||"Reel")}</div><div class="hdl">${esc(r.title?(r.handle||PFNAME[r.platform]):(PFNAME[r.platform]||""))}</div></div>
       <a class="open" href="${esc(r.url)}" target="_blank" rel="noopener">Voir ↗</a></div>
     <div class="chips">${(r.kind||[]).map(k=>`<span class="chip k">${LABEL[k]}</span>`).join("")}${(r.cosplay||[]).map(k=>`<span class="chip c clickable" data-go="cosplay:${k}">${LABEL[k]}</span>`).join("")}${(r.format||[]).map(k=>`<span class="chip f clickable" data-go="format:${k}">${LABEL[k]}</span>`).join("")}${inbox?`<span class="chip">à classer</span>`:""}</div>
     ${r.coverStatus==="failed"?`<div class="covst">Vignette introuvable automatiquement. <button type="button" data-refetch>Réessayer</button> ou ajoute une capture via Modifier.</div>`:r.coverStatus==="pending"?`<div class="covst">Vignette en cours de récupération…</div>`:""}
-    ${inbox?"":`<div class="rating"><span class="lbl">Ta note</span><div class="gems">${gems}</div>
-      <span class="avg">${others.map(([k,v])=>`<span data-name="${k}">${esc(nameOf(k))}</span> <b>${v}</b>`).join(" · ")}${avg!=null?`${others.length?" · ":""}moy. <b>${avg}</b>`:""}</span></div>
+    ${inbox?"":`<div class="ratings"><div class="rh">Tes notes par catégorie</div>${cats.map(ratingRow).join("")}</div>
     <div class="notes"><label>Tes notes <span class="saved" data-saved></span></label>
       <textarea data-notes placeholder="Ce qu'il faut retenir, refaire, voler…" ${canWrite===false?"disabled":""}>${esc(r.notes?.[uid]||"")}</textarea>
       ${otherNotes.map(([k,v])=>`<label style="margin-top:10px">Notes de <span data-name="${k}">${esc(nameOf(k))}</span></label><div class="other">${esc(v)}</div>`).join("")}</div>`}
@@ -403,12 +428,14 @@ function wireView(root){
   root.querySelectorAll("[data-cat]").forEach(el=>el.addEventListener("click",()=>go({screen:"reels",cat:el.dataset.cat})));
   root.querySelectorAll("[data-back]").forEach(el=>el.addEventListener("click",()=>go({screen:state.screen==="reels"?"list":"home"})));
   root.querySelectorAll("[data-kind]").forEach(el=>el.addEventListener("click",()=>{state.kind=el.dataset.kind;render();}));
+  root.querySelectorAll("[data-sort]").forEach(el=>el.addEventListener("click",()=>{state.sort=el.dataset.sort;render();}));
   root.querySelectorAll("[data-go]").forEach(el=>el.addEventListener("click",()=>{const[t,c]=el.dataset.go.split(":");closeDetail();go({screen:"reels",tab:t,cat:c});}));
   root.querySelectorAll(".card").forEach(cardEl=>{
     const id=cardEl.dataset.id,r=reels.find(x=>x.id===id);if(!r)return;
-    cardEl.querySelectorAll("[data-rate]").forEach(b=>b.addEventListener("click",async()=>{const n=+b.dataset.rate,cur=r.ratings?.[uid],val=cur===n?null:n;
-      cardEl.querySelectorAll("[data-rate]").forEach(x=>x.classList.toggle("lit",val!=null&&+x.dataset.rate<=val));
-      await safeWrite(()=>api("/reels/"+id,{method:"PATCH",body:{rating:val}}));}));
+    cardEl.querySelectorAll("[data-rcat]").forEach(row=>{const cat=row.dataset.rcat;
+      row.querySelectorAll("[data-rate]").forEach(b=>b.addEventListener("click",async()=>{const n=+b.dataset.rate,val=myRating(r,cat)===n?null:n;
+        row.querySelectorAll("[data-rate]").forEach(x=>x.classList.toggle("lit",val!=null&&+x.dataset.rate<=val));
+        await safeWrite(()=>api("/reels/"+id,{method:"PATCH",body:{rating:val,cat}}));}));});
     const ta=cardEl.querySelector("[data-notes]");
     if(ta)ta.addEventListener("input",()=>{clearTimeout(dirtyNotes.get(id));dirtyNotes.set(id,setTimeout(async()=>{dirtyNotes.delete(id);
       const ok=await safeWrite(()=>api("/reels/"+id,{method:"PATCH",body:{notes:ta.value}}));const s=cardEl.querySelector("[data-saved]");if(s&&ok){s.textContent="enregistré";setTimeout(()=>s.textContent="",1500);}},700));});
