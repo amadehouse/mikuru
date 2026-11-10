@@ -367,6 +367,9 @@ main{max-width:760px;margin:0 auto;padding:10px 14px 0}
 .ctd{font-size:12px;color:var(--ivory-dim)}
 .tst{font-size:11px;font-weight:600;padding:4px 9px;border-radius:999px;white-space:nowrap}
 .ts-idee{background:rgba(244,233,218,.14);color:var(--ivory)}.ts-a_tourner{background:rgba(255,79,154,.25);color:#ffd0e2}.ts-tourne{background:rgba(79,195,161,.22);color:#a6ecd6}.ts-poste{background:var(--gold);color:var(--velvet)}
+.ctr-r{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.cnote{display:flex;align-items:center;gap:4px}.cnote svg{width:13px;height:13px;fill:var(--gold);stroke:var(--gold-pale);stroke-width:1}.cnote b{font-family:Cormorant,serif;font-size:19px;color:var(--gold)}
+.crate{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .ctth{grid-column:1/-1;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-top:2px}
 .ctth::-webkit-scrollbar{display:none}
 .bt{flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;width:58px}
@@ -889,30 +892,33 @@ function borrowsOf(t){const out=[];
   for(const [k,cat,ic,lab] of SLOTS){const r=reels.find(x=>x.id===t[k+"Reel"]);if(r||t[k+"Text"])out.push({ic,lab,reel:r,text:t[k+"Text"]||""});}
   for(const x of t.extras||[]){const r=reels.find(y=>y.id===x.reel);const lab=x.cat?LABEL[x.cat]:x.label||"Autre";if(r||x.text)out.push({ic:"+",lab,reel:r,text:x.text||""});}
   return out;}
-function contentRow(t){const c=getC(t.char),u=c&&refUrl(c),dd=daysTo(t.date),bw=borrowsOf(t);
+const contentAvg=t=>mean(Object.values(t.ratings||{}).filter(n=>typeof n==="number"));
+function contentRow(t){const c=getC(t.char),u=c&&refUrl(c),dd=daysTo(t.date),bw=borrowsOf(t),avg=contentAvg(t);
   const withReel=bw.filter(b=>b.reel),textOnly=bw.filter(b=>!b.reel);
   return `<div class="ctr" data-ctn="${t.id}" role="button" tabindex="0">
     <span class="cth">${u?`<img src="${u}" alt="">`:`<span class="mm">${c?esc(c.name[0]):"✦"}</span>`}</span>
     <span class="ctm"><b>${esc(t.title)}</b>
       <span class="ctx">${c?`<i>♛ ${esc(c.name)}</i>`:""}${textOnly.map(b=>`<i>${b.ic==="+"?esc(b.lab)+" :":b.ic} ${esc(b.text)}</i>`).join("")}</span>
       <span class="ctd">${t.date?fdate(t.date,{weekday:"short",day:"numeric",month:"short"})+(dd!=null&&dd>=0&&t.status!=="poste"?(dd===0?" · aujourd'hui":dd===1?" · demain":""):""):"pas de date"}${(t.platforms||[]).length?" · "+t.platforms.map(p=>PLAT.find(x=>x[0]===p)?.[1]||p).join(", "):""}</span></span>
-    <span class="tst ts-${t.status}">${TSTATUS.find(x=>x[0]===t.status)?.[1]}</span>
+    <span class="ctr-r"><span class="tst ts-${t.status}">${TSTATUS.find(x=>x[0]===t.status)?.[1]}</span>${avg!=null?`<span class="cnote">${GEM}<b>${avg}</b></span>`:""}</span>
     ${withReel.length?`<span class="ctth">${withReel.map(b=>{const cu=coverUrl(b.reel);return `<button class="bt" data-tile="${b.reel.id}" title="${esc(b.lab)} : ${esc(reelName(b.reel))}">
       <span class="bi">${cu?`<img src="${cu}" alt="" loading="lazy">`:`<span class="mm">${PF[b.reel.platform]||"↗"}</span>`}<em>${b.ic==="+"?"+":b.ic}</em></span>
       <span class="bl">${esc(b.lab)}</span></button>`;}).join("")}</span>`:""}
   </div>`;}
 function renderContents(){
-  const f=state.tfilter||"tous",rank={a_tourner:0,idee:1,tourne:2,poste:3};
+  const f=state.tfilter||"tous",rank={a_tourner:0,idee:1,tourne:2,poste:3},ts=state.tsort||"date";
   const items=contents.filter(t=>f==="tous"||t.status===f).sort((a,b)=>{if(f==="tous"&&(a.status==="poste")!==(b.status==="poste"))return a.status==="poste"?1:-1;
     if(a.status==="poste"&&b.status==="poste")return (b.date||"")<(a.date||"")?-1:1;
     if(a.date&&b.date&&a.date!==b.date)return a.date<b.date?-1:1;if(a.date&&!b.date)return -1;if(b.date&&!a.date)return 1;return rank[a.status]-rank[b.status]||(b.createdAt||0)-(a.createdAt||0);});
+  if(ts==="note")items.sort((a,b)=>{const x=contentAvg(a),y=contentAvg(b);if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;return y-x;});
   return pageHead("Contenu","Accueil",null)+
   `<div class="cfilters"><button data-tfilter="tous" class="${f==="tous"?"on":""}">Tout</button>${TSTATUS.map(([k])=>`<button data-tfilter="${k}" class="${f===k?"on":""}">${TSTATUS_PL[k]} <span class="n">${contents.filter(t=>t.status===k).length||""}</span></button>`).join("")}</div>
+  ${contents.length>1?`<div class="sorts"><span>Trier</span><button data-tsort="date" class="${ts==="date"?"on":""}">Date</button><button data-tsort="note" class="${ts==="note"?"on":""}">Mieux notés</button></div>`:""}
   ${items.length?`<div class="ctlist">${items.map(contentRow).join("")}</div>`:`<div class="empty"><b>${contents.length?"Rien ici":"Aucun contenu prévu"}</b>${contents.length?"Aucun contenu avec ce statut.":"Appuie sur + pour planifier une vidéo : cosplay, son, danse."}</div>`}`;
 }
 function openContentForm(mode,t){contentForm={mode,d:{id:t?.id,title:t?.title||"",status:t?.status||"idee",date:t?.date||"",char:t?.char||"",
   musicReel:t?.musicReel||"",musicText:t?.musicText||"",danceReel:t?.danceReel||"",danceText:t?.danceText||"",formatReel:t?.formatReel||"",formatText:t?.formatText||"",
-  extras:(t?.extras||[]).map(x=>({...x,reel:x.reel||""})),platforms:[...(t?.platforms||[])],notes:t?.notes||""}};renderContentForm();if(mode==="add")setTimeout(()=>$("#t-title")?.focus(),80);}
+  extras:(t?.extras||[]).map(x=>({...x,reel:x.reel||""})),ratings:{...(t?.ratings||{})},myRating:t?.ratings?.[uid]??null,platforms:[...(t?.platforms||[])],notes:t?.notes||""}};renderContentForm();if(mode==="add")setTimeout(()=>$("#t-title")?.focus(),80);}
 function closeContentForm(){contentForm=null;$("#modalHost").innerHTML="";}
 // reels proposés : ceux de la catégorie d'abord ; « tous » pour une catégorie libre
 function reelOptions(cat,sel){const pool=cat?reels.filter(r=>(r.format||[]).includes(cat)||(r.cosplay||[]).includes(cat)):reels.filter(isClassified);
@@ -945,6 +951,8 @@ function renderContentForm(){const d=contentForm.d;
     ${slotField("format","format","Format repris","ou décris le format (ex : avant/après, POV…)","voir le format")}
     <div class="field"><label>Autres emprunts</label><div class="xrows">${d.extras.map(extraRow).join("")}</div>
       <button type="button" class="xadd" id="t-xadd">+ Ajouter une catégorie</button></div>
+    <div class="field"><label>Ta note</label><div class="crate"><div class="gems">${Array.from({length:10},(_,i)=>`<button type="button" data-crate="${i+1}" class="${d.myRating>=i+1?"lit":""}" aria-label="${i+1} sur 10">${GEM}</button>`).join("")}</div>
+      <span class="avg">${Object.entries(d.ratings).filter(([k])=>k!==uid).map(([k,v])=>`${esc(nameOf(k))} <b>${v}</b>`).join(" · ")}</span></div></div>
     <div class="field"><label for="t-notes">Script / notes</label><textarea id="t-notes" class="ta" placeholder="Plans, texte à l'écran, lieu de tournage…">${esc(d.notes)}</textarea></div>
     <div class="actions">${contentForm.mode==="edit"?`<button type="button" id="t-del" class="del">Supprimer</button>`:`<button type="button" id="t-cancel">Annuler</button>`}<button type="submit" class="go">${contentForm.mode==="add"?"Planifier":"Enregistrer"}</button></div></form></div>`;
   if(keep)$("#tov .sheet").scrollTop=keep.top;
@@ -960,12 +968,14 @@ function renderContentForm(){const d=contentForm.d;
     row.querySelector("[data-xtext]")?.addEventListener("input",e=>x.text=e.target.value);
     row.querySelector("[data-xdel]").addEventListener("click",()=>{d.extras.splice(+row.dataset.x,1);renderContentForm();});});
   $("#t-xadd").addEventListener("click",()=>{d.extras.push({cat:"hook",label:"",reel:"",text:""});renderContentForm();});
+  document.querySelectorAll("[data-crate]").forEach(b=>b.addEventListener("click",()=>{const n=+b.dataset.crate;d.myRating=d.myRating===n?null:n;
+    document.querySelectorAll("[data-crate]").forEach(x=>x.classList.toggle("lit",d.myRating!=null&&+x.dataset.crate<=d.myRating));}));
   document.querySelectorAll("[data-tst]").forEach(b=>b.addEventListener("click",()=>{d.status=b.dataset.tst;document.querySelectorAll("[data-tst]").forEach(x=>x.classList.toggle("on",x===b));}));
   document.querySelectorAll("[data-tpl]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.tpl,i=d.platforms.indexOf(k);i>=0?d.platforms.splice(i,1):d.platforms.push(k);b.classList.toggle("on");}));
   const del=$("#t-del");del?.addEventListener("click",async()=>{if(!del.dataset.arm){del.dataset.arm="1";del.textContent="Confirmer ?";setTimeout(()=>{delete del.dataset.arm;del.textContent="Supprimer";},3000);return;}
     try{await api("/contents/"+d.id,{method:"DELETE"});contents=contents.filter(x=>x.id!==d.id);closeContentForm();render();}catch(e){showStatus("Suppression impossible.",true);}});
   $("#tf").addEventListener("submit",async e=>{e.preventDefault();if(!d.title.trim())return;const b=$("#tf .go");b.disabled=true;
-    try{const body={title:d.title,status:d.status,date:d.date,char:d.char||null,platforms:d.platforms,notes:d.notes,
+    try{const body={title:d.title,status:d.status,date:d.date,char:d.char||null,platforms:d.platforms,notes:d.notes,rating:d.myRating,
         extras:d.extras.map(x=>({cat:x.cat,label:x.cat?"":x.label,reel:x.reel||null,text:x.reel?"":x.text}))};
       for(const [k] of SLOTS){body[k+"Reel"]=d[k+"Reel"]||null;body[k+"Text"]=d[k+"Reel"]?"":d[k+"Text"];}
       const t=(contentForm.mode==="add"?await api("/contents",{method:"POST",body}):await api("/contents/"+d.id,{method:"PATCH",body})).content;
@@ -1009,6 +1019,7 @@ function wireView(root){
   root.querySelectorAll("[data-ctn]").forEach(el=>{const open=()=>openContentForm("edit",contents.find(t=>t.id===el.dataset.ctn));
     el.addEventListener("click",open);el.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target===el)open();});});
   root.querySelectorAll("[data-tfilter]").forEach(el=>el.addEventListener("click",()=>{state.tfilter=el.dataset.tfilter;render();}));
+  root.querySelectorAll("[data-tsort]").forEach(el=>el.addEventListener("click",()=>{state.tsort=el.dataset.tsort;render();}));
   wireConv(root);
   root.querySelectorAll("[data-char]").forEach(el=>el.addEventListener("click",()=>go({screen:"char",charId:el.dataset.char})));
   root.querySelectorAll("[data-cfilter]").forEach(el=>el.addEventListener("click",()=>{state.cfilter=el.dataset.cfilter;render();}));
