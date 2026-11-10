@@ -303,6 +303,9 @@ main{max-width:760px;margin:0 auto;padding:10px 14px 0}
 .ready button{font-family:Jost;font-style:normal;font-size:14px;height:38px;padding:0 14px;border-radius:999px;background:linear-gradient(180deg,var(--gold-pale),var(--gold) 55%,var(--gold-deep));color:var(--velvet);font-weight:600}
 .convln{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .plan{margin-bottom:14px}
+.ctools{display:flex;flex-direction:column;gap:8px;margin:0 0 14px}
+.ctools .sorts{margin:0}
+.osel{height:42px;font-size:14px}
 .pchip{display:inline-flex;align-items:center;border:1px solid rgba(226,180,90,.55);border-radius:999px;overflow:hidden}
 .pchip button{height:32px;padding:0 10px;font-size:13px;color:var(--gold-pale);text-transform:capitalize}
 .pchip .x{padding:0 10px;border-left:1px solid rgba(226,180,90,.35);color:var(--ivory-dim);font-size:16px}
@@ -357,13 +360,29 @@ main{max-width:760px;margin:0 auto;padding:10px 14px 0}
 /* ---- contenu ---- */
 .cfilters .n{opacity:.7;font-size:12px;margin-left:2px}
 .ctlist{display:flex;flex-direction:column;gap:8px}
-.ctr{display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:center;width:100%;text-align:left;padding:10px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--ivory)}
+.ctr{cursor:pointer;display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:center;width:100%;text-align:left;padding:10px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--ivory)}
 .cth img,.cth .mm{width:52px;height:66px;border-radius:10px;object-fit:cover;display:grid}
 .ctm{display:flex;flex-direction:column;gap:4px;min-width:0}.ctm b{font-family:Cormorant,serif;font-size:20px;line-height:1.1;font-weight:700}
 .ctx{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:13px;color:#e8d9cc}.ctx i{font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .ctd{font-size:12px;color:var(--ivory-dim)}
 .tst{font-size:11px;font-weight:600;padding:4px 9px;border-radius:999px;white-space:nowrap}
 .ts-idee{background:rgba(244,233,218,.14);color:var(--ivory)}.ts-a_tourner{background:rgba(255,79,154,.25);color:#ffd0e2}.ts-tourne{background:rgba(79,195,161,.22);color:#a6ecd6}.ts-poste{background:var(--gold);color:var(--velvet)}
+.ctth{grid-column:1/-1;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-top:2px}
+.ctth::-webkit-scrollbar{display:none}
+.bt{flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;width:58px}
+.bt .bi{position:relative;width:52px;height:70px;border-radius:10px;overflow:hidden;border:1px solid var(--line-strong);display:block}
+.bt .bi img,.bt .bi .mm{width:100%;height:100%;object-fit:cover;display:grid}
+.bt .bi em{position:absolute;right:3px;bottom:3px;width:20px;height:20px;border-radius:50%;background:rgba(27,15,36,.85);border:1px solid var(--gold);color:var(--gold);font-style:normal;font-size:11px;display:grid;place-items:center}
+.bt .bl{font-size:11px;color:var(--ivory-dim);max-width:58px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.picked{display:flex;align-items:center;gap:10px;margin-top:8px;padding:6px;border-radius:12px;background:rgba(0,0,0,.22);text-decoration:none;color:var(--ivory)}
+.picked img,.picked .mm{width:40px;height:54px;border-radius:8px;object-fit:cover;flex:none;display:grid}
+.picked span{display:flex;flex-direction:column;min-width:0}.picked b{font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.picked i{font-style:normal;font-size:12px;color:var(--gold)}
+.xrows{display:flex;flex-direction:column;gap:10px}
+.xrow{border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.xrow input{height:42px}
+.xhead{display:flex;gap:8px}.xhead .sel{flex:1}
+.xdel{width:44px;flex:none;border-radius:12px;border:1px solid rgba(255,79,154,.35);color:#ff8fb6;font-size:20px}
+.xadd{margin-top:10px;width:100%;height:44px;border-radius:12px;border:1px dashed var(--gold);color:var(--gold);font-size:15px}
 textarea.ta{width:100%;min-height:80px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:rgba(0,0,0,.25);color:var(--ivory);outline:none;font:inherit;resize:vertical}
 .actions .del{flex:0 0 auto;padding:0 18px;color:#ff8fb6;border-color:rgba(255,79,154,.35)}
 .field .tiny{display:inline-block;margin-top:8px;color:var(--gold)}
@@ -619,26 +638,59 @@ async function planChar(charId,val){const [cid,day]=val.split("|");
   try{const d=await api("/convs/"+cid,{method:"PATCH",body:{days:{[day]:charId}}});applyConvLocal(d.conv);return true;}catch(e){showStatus("Impossible de prévoir ce jour.",true);return false;}}
 async function unplanChar(val){const [cid,day]=val.split("|");
   try{const d=await api("/convs/"+cid,{method:"PATCH",body:{days:{[day]:null}}});applyConvLocal(d.conv);}catch(e){showStatus("Impossible de retirer ce jour.",true);}}
+/* œuvres : liste exacte + regroupement par franchise (ex : « Persona » couvre Persona 3, Persona 5 Royal…) */
+const normS=s=>(s||"").trim().toLowerCase();
+const franchiseOf=s=>normS(s).split(/[\s:\-–]+/)[0]||"";
+function oeuvreOptions(list){
+  const series=[...new Map(list.filter(c=>c.series&&c.series.trim()).map(c=>[normS(c.series),c.series.trim()])).values()].sort((a,b)=>a.localeCompare(b,"fr"));
+  const fr={};for(const s of series){const f=franchiseOf(s);(fr[f]??=[]).push(s);}
+  const groups=Object.entries(fr).filter(([,v])=>v.length>1);
+  const cnt=pred=>list.filter(pred).length, cur=state.oeuvre||"";
+  let html=`<option value="">Toutes les œuvres (${list.length})</option>`;
+  if(groups.length)html+=`<optgroup label="Franchises">${groups.map(([f,v])=>{const label=v[0].split(/[\s:\-–]+/)[0];
+    return `<option value="f:${esc(f)}" ${cur==="f:"+f?"selected":""}>${esc(label)} — tout (${cnt(c=>franchiseOf(c.series)===f)})</option>`;}).join("")}</optgroup>`;
+  html+=`<optgroup label="Œuvres">${series.map(s=>`<option value="s:${esc(normS(s))}" ${cur==="s:"+normS(s)?"selected":""}>${esc(s)} (${cnt(c=>normS(c.series)===normS(s))})</option>`).join("")}</optgroup>`;
+  if(list.some(c=>!c.series||!c.series.trim()))html+=`<option value="none" ${cur==="none"?"selected":""}>Sans œuvre (${cnt(c=>!c.series||!c.series.trim())})</option>`;
+  return html;
+}
+function matchOeuvre(c){const o=state.oeuvre||"";if(!o)return true;if(o==="none")return !c.series||!c.series.trim();
+  if(o.startsWith("f:"))return franchiseOf(c.series)===o.slice(2);return normS(c.series)===o.slice(2);}
+const byName=(a,b)=>(a.name||"").localeCompare(b.name||"","fr",{sensitivity:"base"});
+const bySeries=(a,b)=>{const x=normS(a.series),y=normS(b.series);if(!x&&y)return 1;if(x&&!y)return -1;return x.localeCompare(y,"fr")||byName(a,b);};
+function cosplayTools(pool,sortKey,sorts){
+  if(!pool.length)return "";
+  const cur=state[sortKey]||sorts[0][0];
+  return `<div class="ctools"><select class="sel osel" data-oeuvre aria-label="Filtrer par œuvre">${oeuvreOptions(pool)}</select>
+    <div class="sorts"><span>Trier</span>${sorts.map(([k,l])=>`<button data-csort="${sortKey}:${k}" class="${cur===k?"on":""}">${l}</button>`).join("")}</div></div>`;
+}
 function renderCosplay(){
   const tab=state.ctab||"cosplan";
   const seg=`<div class="seg2"><button data-ctab="cosplan" class="${tab==="cosplan"?"on":""}">Cosplan <span>${chars.filter(c=>!isWardrobe(c)).length}</span></button><button data-ctab="garde" class="${tab==="garde"?"on":""}">Garde-robe <span>${chars.filter(isWardrobe).length}</span></button></div>`;
   if(tab==="garde"){
-    const f=state.gfilter||"tous";
-    const items=chars.filter(isWardrobe).filter(c=>f==="tous"||c.status===f).sort((a,b)=>wornList(b.id).length-wornList(a.id).length||(a.name||"").localeCompare(b.name||""));
-    return pageHead("Cosplay","Accueil",null)+seg+
-    `<div class="cfilters"><button data-gfilter="tous" class="${f==="tous"?"on":""}">Tout le stock</button><button data-gfilter="pret" class="${f==="pret"?"on":""}">Prêts à porter</button><button data-gfilter="porte" class="${f==="porte"?"on":""}">Déjà portés</button></div>
-    ${items.length?`<div class="grid">${items.map(c=>charCard(c,true)).join("")}</div>`:`<div class="empty"><b>Garde-robe vide</b>Un costume arrive ici quand sa checklist est validée (ou en le passant en « Prêt »). Le + ajoute aussi un costume déjà fini.</div>`}`;
+    const pool=chars.filter(isWardrobe), s=state.gsort||"nom";
+    if(state.oeuvre&&!pool.some(matchOeuvre))state.oeuvre="";
+    const items=pool.filter(matchOeuvre).sort(s==="oeuvre"?bySeries:byName);
+    return pageHead("Cosplay","Accueil",null)+seg+cosplayTools(pool,"gsort",[["nom","Nom"],["oeuvre","Œuvre"]])+
+    (items.length?`<div class="grid">${items.map(c=>charCard(c,true)).join("")}</div>`
+      :pool.length?`<div class="empty"><b>Aucun costume</b>Rien dans la garde-robe pour cette œuvre.</div>`
+      :`<div class="empty"><b>Garde-robe vide</b>Un costume arrive ici quand sa checklist est validée. Le + ajoute aussi un costume déjà fini.</div>`);
   }
-  const f=state.cfilter||"tous";
-  const items=chars.filter(c=>!isWardrobe(c)).filter(c=>f==="tous"||c.status===f).sort((a,b)=>{const da=daysTo(effDate(a)),db=daysTo(effDate(b));
+  const f=state.cfilter||"tous", s=state.csort||"date";
+  const pool=chars.filter(c=>!isWardrobe(c));
+  if(state.oeuvre&&!pool.some(matchOeuvre))state.oeuvre="";
+  const byDate=(a,b)=>{const da=daysTo(effDate(a)),db=daysTo(effDate(b));
     if(a.status!==b.status)return a.status==="prep"?-1:1;
-    if(da!=null&&db!=null)return da-db; if(da!=null)return -1; if(db!=null)return 1; return (b.createdAt||0)-(a.createdAt||0);});
+    if(da!=null&&db!=null)return da-db; if(da!=null)return -1; if(db!=null)return 1; return (b.createdAt||0)-(a.createdAt||0);};
+  const items=pool.filter(c=>f==="tous"||c.status===f).filter(matchOeuvre).sort(s==="nom"?byName:s==="oeuvre"?bySeries:byDate);
   return pageHead("Cosplay","Accueil",null)+seg+
-  `<div class="cfilters"><button data-cfilter="tous" class="${f==="tous"?"on":""}">Tous</button><button data-cfilter="prep" class="${f==="prep"?"on":""}">En prépa</button><button data-cfilter="idee" class="${f==="idee"?"on":""}">Idées</button></div>
-  ${items.length?`<div class="grid">${items.map(c=>charCard(c)).join("")}</div>`:`<div class="empty"><b>Rien en préparation</b>Appuie sur + pour ajouter un personnage à cosplayer.</div>`}`;
+  `<div class="cfilters"><button data-cfilter="tous" class="${f==="tous"?"on":""}">Tous</button><button data-cfilter="prep" class="${f==="prep"?"on":""}">En prépa</button><button data-cfilter="idee" class="${f==="idee"?"on":""}">Idées</button></div>`+
+  cosplayTools(pool,"csort",[["date","Prochains"],["nom","Nom"],["oeuvre","Œuvre"]])+
+  (items.length?`<div class="grid">${items.map(c=>charCard(c)).join("")}</div>`
+    :pool.length?`<div class="empty"><b>Personne ici</b>Aucun perso pour ce filtre.</div>`
+    :`<div class="empty"><b>Rien en préparation</b>Appuie sur + pour ajouter un personnage à cosplayer.</div>`);
 }
 function renderChar(){
-  const c=getC(state.charId); if(!c){state.screen="cosplan";return renderCosplan();}
+  const c=getC(state.charId); if(!c){state.screen="cosplay";return renderCosplay();}
   const p=progress(c),u=refUrl(c),j=jx(effDate(c)),lr=linkedReels(c.id);
   const others=Object.entries(c.notes||{}).filter(([k,v])=>k!==uid&&v&&v.trim());
   const parts=COSPLAY.map(([k,l])=>{const pt=c.parts?.[k]||{state:"a_faire",cost:0,note:""};
@@ -704,7 +756,7 @@ function renderCharForm(){
   $("#modalHost").innerHTML=`<div class="overlay" id="cov"><form class="sheet" id="cf"><div class="grab"></div>
     <h2>${charForm.mode==="add"?"Nouveau personnage":"Modifier le personnage"}</h2>
     <div class="field"><label for="c-name">Personnage</label><input id="c-name" type="text" placeholder="ex : Saber" value="${esc(d.name)}" required></div>
-    <div class="field"><label for="c-series">Œuvre</label><input id="c-series" type="text" placeholder="ex : Fate/stay night" value="${esc(d.series)}"></div>
+    <div class="field"><label for="c-series">Œuvre</label><input id="c-series" type="text" list="seriesList" autocomplete="off" placeholder="ex : Persona 5" value="${esc(d.series)}"><datalist id="seriesList">${[...new Set(chars.map(c=>(c.series||"").trim()).filter(Boolean))].sort().map(s=>`<option value="${esc(s)}">`).join("")}</datalist></div>
     <div class="field"><label>Image de référence</label><div class="cov"><div class="prev" id="cPrev">${d.file?`<img src="${URL.createObjectURL(d.file)}" alt="">`:d.ref?`<img src="/covers/${d.ref}" alt="">`:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="m21 17-5-5-7 7"/></svg>`}</div>
       <div class="btns"><label for="c-file">${d.file||d.ref?"Changer":"Choisir une image"}</label><input id="c-file" type="file" accept="image/*"><span class="st">Art officiel, screenshot, moodboard…</span></div></div></div>
     <div class="field"><label>Statut</label><div class="pick">${CSTATUS.map(([k,l])=>`<button type="button" data-cst="${k}" class="k ${d.status===k?"on":""}">${l}</button>`).join("")}</div></div>
@@ -770,7 +822,7 @@ function renderConvs(){
   (past.length?`<div class="ornament">déjà vécues</div><div class="cvlist">${past.map(convCard).join("")}</div>`:"");
 }
 function charOptions(sel){const opt=c=>`<option value="${c.id}" ${sel===c.id?"selected":""}>${esc(c.name)}${c.status==="prep"?" (en prépa)":c.status==="idee"?" (idée)":""}</option>`;
-  const w=chars.filter(isWardrobe),o=chars.filter(c=>!isWardrobe(c));
+  const w=chars.filter(isWardrobe).sort(byName),o=chars.filter(c=>!isWardrobe(c)).sort(byName);
   return `<option value="">— à choisir —</option>${w.length?`<optgroup label="Garde-robe">${w.map(opt).join("")}</optgroup>`:""}${o.length?`<optgroup label="Cosplan">${o.map(opt).join("")}</optgroup>`:""}`;}
 function miniChar(c){const p=progress(c),u=refUrl(c);
   return `<button class="mini" data-char="${c.id}">${u?`<img src="${u}" alt="">`:`<span class="mm">${esc((c.name||"?")[0])}</span>`}
@@ -831,15 +883,24 @@ const TSTATUS=[["idee","Idée"],["a_tourner","À tourner"],["tourne","Tourné"],
 const TSTATUS_PL={idee:"Idées",a_tourner:"À tourner",tourne:"Tournés",poste:"Postés"};
 const PLAT=[["tiktok","TikTok"],["instagram","Insta"],["x","X"],["youtube","YouTube"]];
 const reelName=r=>r?(r.title||r.handle||"reel"):"";
-function musicOf(t){const r=reels.find(x=>x.id===t.musicReel);return r?reelName(r):t.musicText||"";}
-function danceOf(t){const r=reels.find(x=>x.id===t.danceReel);return r?reelName(r):t.danceText||"";}
-function contentRow(t){const c=getC(t.char),u=c&&refUrl(c),m=musicOf(t),dn=danceOf(t),dd=daysTo(t.date);
-  return `<button class="ctr" data-ctn="${t.id}">
+// Les « emprunts » d'un contenu : musique, danse, format + catégories ajoutées
+const SLOTS=[["music","musique","♪","Musique"],["dance","danse","✦","Danse"],["format","format","▣","Format"]];
+function borrowsOf(t){const out=[];
+  for(const [k,cat,ic,lab] of SLOTS){const r=reels.find(x=>x.id===t[k+"Reel"]);if(r||t[k+"Text"])out.push({ic,lab,reel:r,text:t[k+"Text"]||""});}
+  for(const x of t.extras||[]){const r=reels.find(y=>y.id===x.reel);const lab=x.cat?LABEL[x.cat]:x.label||"Autre";if(r||x.text)out.push({ic:"+",lab,reel:r,text:x.text||""});}
+  return out;}
+function contentRow(t){const c=getC(t.char),u=c&&refUrl(c),dd=daysTo(t.date),bw=borrowsOf(t);
+  const withReel=bw.filter(b=>b.reel),textOnly=bw.filter(b=>!b.reel);
+  return `<div class="ctr" data-ctn="${t.id}" role="button" tabindex="0">
     <span class="cth">${u?`<img src="${u}" alt="">`:`<span class="mm">${c?esc(c.name[0]):"✦"}</span>`}</span>
     <span class="ctm"><b>${esc(t.title)}</b>
-      <span class="ctx">${c?`<i>♛ ${esc(c.name)}</i>`:""}${m?`<i>♪ ${esc(m)}</i>`:""}${dn?`<i>✦ ${esc(dn)}</i>`:""}</span>
+      <span class="ctx">${c?`<i>♛ ${esc(c.name)}</i>`:""}${textOnly.map(b=>`<i>${b.ic==="+"?esc(b.lab)+" :":b.ic} ${esc(b.text)}</i>`).join("")}</span>
       <span class="ctd">${t.date?fdate(t.date,{weekday:"short",day:"numeric",month:"short"})+(dd!=null&&dd>=0&&t.status!=="poste"?(dd===0?" · aujourd'hui":dd===1?" · demain":""):""):"pas de date"}${(t.platforms||[]).length?" · "+t.platforms.map(p=>PLAT.find(x=>x[0]===p)?.[1]||p).join(", "):""}</span></span>
-    <span class="tst ts-${t.status}">${TSTATUS.find(x=>x[0]===t.status)?.[1]}</span></button>`;}
+    <span class="tst ts-${t.status}">${TSTATUS.find(x=>x[0]===t.status)?.[1]}</span>
+    ${withReel.length?`<span class="ctth">${withReel.map(b=>{const cu=coverUrl(b.reel);return `<button class="bt" data-tile="${b.reel.id}" title="${esc(b.lab)} : ${esc(reelName(b.reel))}">
+      <span class="bi">${cu?`<img src="${cu}" alt="" loading="lazy">`:`<span class="mm">${PF[b.reel.platform]||"↗"}</span>`}<em>${b.ic==="+"?"+":b.ic}</em></span>
+      <span class="bl">${esc(b.lab)}</span></button>`;}).join("")}</span>`:""}
+  </div>`;}
 function renderContents(){
   const f=state.tfilter||"tous",rank={a_tourner:0,idee:1,tourne:2,poste:3};
   const items=contents.filter(t=>f==="tous"||t.status===f).sort((a,b)=>{if(f==="tous"&&(a.status==="poste")!==(b.status==="poste"))return a.status==="poste"?1:-1;
@@ -849,11 +910,29 @@ function renderContents(){
   `<div class="cfilters"><button data-tfilter="tous" class="${f==="tous"?"on":""}">Tout</button>${TSTATUS.map(([k])=>`<button data-tfilter="${k}" class="${f===k?"on":""}">${TSTATUS_PL[k]} <span class="n">${contents.filter(t=>t.status===k).length||""}</span></button>`).join("")}</div>
   ${items.length?`<div class="ctlist">${items.map(contentRow).join("")}</div>`:`<div class="empty"><b>${contents.length?"Rien ici":"Aucun contenu prévu"}</b>${contents.length?"Aucun contenu avec ce statut.":"Appuie sur + pour planifier une vidéo : cosplay, son, danse."}</div>`}`;
 }
-function openContentForm(mode,t){contentForm={mode,d:{id:t?.id,title:t?.title||"",status:t?.status||"idee",date:t?.date||"",char:t?.char||"",musicReel:t?.musicReel||"",musicText:t?.musicText||"",danceReel:t?.danceReel||"",danceText:t?.danceText||"",platforms:[...(t?.platforms||[])],notes:t?.notes||""}};renderContentForm();if(mode==="add")setTimeout(()=>$("#t-title")?.focus(),80);}
+function openContentForm(mode,t){contentForm={mode,d:{id:t?.id,title:t?.title||"",status:t?.status||"idee",date:t?.date||"",char:t?.char||"",
+  musicReel:t?.musicReel||"",musicText:t?.musicText||"",danceReel:t?.danceReel||"",danceText:t?.danceText||"",formatReel:t?.formatReel||"",formatText:t?.formatText||"",
+  extras:(t?.extras||[]).map(x=>({...x,reel:x.reel||""})),platforms:[...(t?.platforms||[])],notes:t?.notes||""}};renderContentForm();if(mode==="add")setTimeout(()=>$("#t-title")?.focus(),80);}
 function closeContentForm(){contentForm=null;$("#modalHost").innerHTML="";}
-function reelSelect(id,cat,sel){const list=reels.filter(r=>(r.format||[]).includes(cat)).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-  return `<select class="sel" id="${id}"><option value="">${list.length?"— choisir dans les archives —":"— aucun reel « "+LABEL[cat]+" » rangé —"}</option>${list.map(r=>`<option value="${r.id}" ${sel===r.id?"selected":""}>${esc(reelName(r))}</option>`).join("")}</select>`;}
-function renderContentForm(){const d=contentForm.d,mr=reels.find(r=>r.id===d.musicReel),dr=reels.find(r=>r.id===d.danceReel);
+// reels proposés : ceux de la catégorie d'abord ; « tous » pour une catégorie libre
+function reelOptions(cat,sel){const pool=cat?reels.filter(r=>(r.format||[]).includes(cat)||(r.cosplay||[]).includes(cat)):reels.filter(isClassified);
+  const list=pool.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  return `<option value="">${list.length?"— choisir dans les archives —":cat?"— aucun reel « "+(LABEL[cat]||cat)+" » rangé —":"— aucun reel rangé —"}</option>${list.map(r=>`<option value="${r.id}" ${sel===r.id?"selected":""}>${esc(reelName(r))}</option>`).join("")}`;}
+function pickedReel(r,verb){if(!r)return "";const cu=coverUrl(r);
+  return `<a class="picked" href="${esc(r.url)}" target="_blank" rel="noopener">${cu?`<img src="${cu}" alt="">`:`<span class="mm">${PF[r.platform]||"↗"}</span>`}<span><b>${esc(reelName(r))}</b><i>${verb} ↗</i></span></a>`;}
+function slotField(k,cat,label,ph,verb){const d=contentForm.d,r=reels.find(x=>x.id===d[k+"Reel"]);
+  return `<div class="field"><label for="t-${k}r">${label}</label><select class="sel" id="t-${k}r" data-slot="${k}">${reelOptions(cat,d[k+"Reel"])}</select>
+    ${r?pickedReel(r,verb):`<input id="t-${k}t" data-slott="${k}" type="text" placeholder="${ph}" value="${esc(d[k+"Text"])}" style="margin-top:8px">`}</div>`;}
+function extraRow(x,i){const r=reels.find(y=>y.id===x.reel);
+  return `<div class="xrow" data-x="${i}">
+    <div class="xhead"><select class="sel" data-xcat aria-label="Catégorie">${FORMAT.filter(([k])=>!["musique","danse","format"].includes(k)).map(([k,l])=>`<option value="${k}" ${x.cat===k?"selected":""}>${l}</option>`).join("")}${COSPLAY.map(([k,l])=>`<option value="${k}" ${x.cat===k?"selected":""}>${l}</option>`).join("")}<option value="" ${!x.cat?"selected":""}>Autre…</option></select>
+      <button type="button" class="xdel" data-xdel aria-label="Retirer cette catégorie">×</button></div>
+    ${!x.cat?`<input type="text" data-xlabel placeholder="Nom de la catégorie (ex : transition)" value="${esc(x.label)}">`:""}
+    <select class="sel" data-xreel aria-label="Reel repris">${reelOptions(x.cat,x.reel)}</select>
+    ${r?pickedReel(r,"voir"):`<input type="text" data-xtext placeholder="ou ce qu'on reprend, en quelques mots…" value="${esc(x.text)}">`}
+  </div>`;}
+function renderContentForm(){const d=contentForm.d;
+  const keep=$("#tf")?{top:$("#tov .sheet").scrollTop}:null;
   $("#modalHost").innerHTML=`<div class="overlay" id="tov"><form class="sheet" id="tf"><div class="grab"></div>
     <h2>${contentForm.mode==="add"?"Nouveau contenu":"Contenu"}</h2>
     <div class="field"><label for="t-title">Idée de vidéo</label><input id="t-title" type="text" placeholder="ex : transition Saber en armure" value="${esc(d.title)}" required></div>
@@ -861,23 +940,34 @@ function renderContentForm(){const d=contentForm.d,mr=reels.find(r=>r.id===d.mus
     <div class="two"><div class="field"><label for="t-date">Date</label><input id="t-date" type="date" value="${esc(d.date)}"></div>
       <div class="field"><label>Où</label><div class="pick">${PLAT.map(([k,l])=>`<button type="button" data-tpl="${k}" class="f ${d.platforms.includes(k)?"on":""}">${l}</button>`).join("")}</div></div></div>
     <div class="field"><label for="t-char">Cosplay</label><select class="sel" id="t-char">${charOptions(d.char).replace("— à choisir —","— aucun —")}</select></div>
-    <div class="field"><label for="t-mr">Musique</label>${reelSelect("t-mr","musique",d.musicReel)}
-      ${mr?`<a class="tiny" href="${esc(mr.url)}" target="_blank" rel="noopener">écouter ↗</a>`:`<input id="t-mt" type="text" placeholder="ou écris le son : titre, artiste…" value="${esc(d.musicText)}" style="margin-top:8px">`}</div>
-    <div class="field"><label for="t-dr">Danse</label>${reelSelect("t-dr","danse",d.danceReel)}
-      ${dr?`<a class="tiny" href="${esc(dr.url)}" target="_blank" rel="noopener">voir la chorée ↗</a>`:`<input id="t-dt" type="text" placeholder="ou décris la danse / la trend…" value="${esc(d.danceText)}" style="margin-top:8px">`}</div>
+    ${slotField("music","musique","Musique","ou écris le son : titre, artiste…","écouter")}
+    ${slotField("dance","danse","Danse","ou décris la danse / la trend…","voir la chorée")}
+    ${slotField("format","format","Format repris","ou décris le format (ex : avant/après, POV…)","voir le format")}
+    <div class="field"><label>Autres emprunts</label><div class="xrows">${d.extras.map(extraRow).join("")}</div>
+      <button type="button" class="xadd" id="t-xadd">+ Ajouter une catégorie</button></div>
     <div class="field"><label for="t-notes">Script / notes</label><textarea id="t-notes" class="ta" placeholder="Plans, texte à l'écran, lieu de tournage…">${esc(d.notes)}</textarea></div>
     <div class="actions">${contentForm.mode==="edit"?`<button type="button" id="t-del" class="del">Supprimer</button>`:`<button type="button" id="t-cancel">Annuler</button>`}<button type="submit" class="go">${contentForm.mode==="add"?"Planifier":"Enregistrer"}</button></div></form></div>`;
+  if(keep)$("#tov .sheet").scrollTop=keep.top;
   $("#tov").addEventListener("click",e=>{if(e.target.id==="tov")closeContentForm();});$("#t-cancel")?.addEventListener("click",closeContentForm);
   $("#t-title").addEventListener("input",e=>d.title=e.target.value);$("#t-date").addEventListener("change",e=>d.date=e.target.value);$("#t-notes").addEventListener("input",e=>d.notes=e.target.value);
   $("#t-char").addEventListener("change",e=>d.char=e.target.value);
-  $("#t-mt")?.addEventListener("input",e=>d.musicText=e.target.value);$("#t-dt")?.addEventListener("input",e=>d.danceText=e.target.value);
-  $("#t-mr").addEventListener("change",e=>{d.musicReel=e.target.value;renderContentForm();});$("#t-dr").addEventListener("change",e=>{d.danceReel=e.target.value;renderContentForm();});
+  document.querySelectorAll("[data-slot]").forEach(s=>s.addEventListener("change",()=>{d[s.dataset.slot+"Reel"]=s.value;renderContentForm();}));
+  document.querySelectorAll("[data-slott]").forEach(s=>s.addEventListener("input",()=>d[s.dataset.slott+"Text"]=s.value));
+  document.querySelectorAll("[data-x]").forEach(row=>{const x=d.extras[+row.dataset.x];
+    row.querySelector("[data-xcat]").addEventListener("change",e=>{x.cat=e.target.value;x.reel="";renderContentForm();});
+    row.querySelector("[data-xreel]").addEventListener("change",e=>{x.reel=e.target.value;renderContentForm();});
+    row.querySelector("[data-xlabel]")?.addEventListener("input",e=>x.label=e.target.value);
+    row.querySelector("[data-xtext]")?.addEventListener("input",e=>x.text=e.target.value);
+    row.querySelector("[data-xdel]").addEventListener("click",()=>{d.extras.splice(+row.dataset.x,1);renderContentForm();});});
+  $("#t-xadd").addEventListener("click",()=>{d.extras.push({cat:"hook",label:"",reel:"",text:""});renderContentForm();});
   document.querySelectorAll("[data-tst]").forEach(b=>b.addEventListener("click",()=>{d.status=b.dataset.tst;document.querySelectorAll("[data-tst]").forEach(x=>x.classList.toggle("on",x===b));}));
   document.querySelectorAll("[data-tpl]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.tpl,i=d.platforms.indexOf(k);i>=0?d.platforms.splice(i,1):d.platforms.push(k);b.classList.toggle("on");}));
   const del=$("#t-del");del?.addEventListener("click",async()=>{if(!del.dataset.arm){del.dataset.arm="1";del.textContent="Confirmer ?";setTimeout(()=>{delete del.dataset.arm;del.textContent="Supprimer";},3000);return;}
     try{await api("/contents/"+d.id,{method:"DELETE"});contents=contents.filter(x=>x.id!==d.id);closeContentForm();render();}catch(e){showStatus("Suppression impossible.",true);}});
   $("#tf").addEventListener("submit",async e=>{e.preventDefault();if(!d.title.trim())return;const b=$("#tf .go");b.disabled=true;
-    try{const body={title:d.title,status:d.status,date:d.date,char:d.char||null,musicReel:d.musicReel||null,musicText:d.musicReel?"":d.musicText,danceReel:d.danceReel||null,danceText:d.danceReel?"":d.danceText,platforms:d.platforms,notes:d.notes};
+    try{const body={title:d.title,status:d.status,date:d.date,char:d.char||null,platforms:d.platforms,notes:d.notes,
+        extras:d.extras.map(x=>({cat:x.cat,label:x.cat?"":x.label,reel:x.reel||null,text:x.reel?"":x.text}))};
+      for(const [k] of SLOTS){body[k+"Reel"]=d[k+"Reel"]||null;body[k+"Text"]=d[k+"Reel"]?"":d[k+"Text"];}
       const t=(contentForm.mode==="add"?await api("/contents",{method:"POST",body}):await api("/contents/"+d.id,{method:"PATCH",body})).content;
       const i=contents.findIndex(x=>x.id===t.id);if(i>=0)contents[i]=t;else contents.unshift(t);closeContentForm();state.screen="contents";render();}
     catch(err){b.disabled=false;showStatus("Enregistrement impossible.",true);}});
@@ -908,14 +998,16 @@ function card(r,inbox=false){
 
 /* ---------- interactions ---------- */
 function wireView(root){
-  root.querySelectorAll("[data-tile]").forEach(el=>el.addEventListener("click",()=>openDetail(el.dataset.tile)));
+  root.querySelectorAll("[data-tile]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openDetail(el.dataset.tile);}));
   root.querySelectorAll("[data-open]").forEach(el=>el.addEventListener("click",()=>go({screen:"list",tab:el.dataset.open})));
   root.querySelectorAll("[data-cat]").forEach(el=>el.addEventListener("click",()=>go({screen:"reels",cat:el.dataset.cat})));
   root.querySelectorAll("[data-back]").forEach(el=>el.addEventListener("click",()=>go({screen:{reels:"list",char:"cosplay",conv:"convs"}[state.screen]||"home"})));
   root.querySelectorAll("[data-ctab]").forEach(el=>el.addEventListener("click",()=>{state.ctab=el.dataset.ctab;render();}));
-  root.querySelectorAll("[data-gfilter]").forEach(el=>el.addEventListener("click",()=>{state.gfilter=el.dataset.gfilter;render();}));
+  root.querySelectorAll("[data-oeuvre]").forEach(el=>el.addEventListener("change",()=>{state.oeuvre=el.value;render();}));
+  root.querySelectorAll("[data-csort]").forEach(el=>el.addEventListener("click",()=>{const[k,v]=el.dataset.csort.split(":");state[k]=v;render();}));
   root.querySelectorAll("[data-conv]").forEach(el=>el.addEventListener("click",()=>go({screen:"conv",convId:el.dataset.conv})));
-  root.querySelectorAll("[data-ctn]").forEach(el=>el.addEventListener("click",()=>openContentForm("edit",contents.find(t=>t.id===el.dataset.ctn))));
+  root.querySelectorAll("[data-ctn]").forEach(el=>{const open=()=>openContentForm("edit",contents.find(t=>t.id===el.dataset.ctn));
+    el.addEventListener("click",open);el.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target===el)open();});});
   root.querySelectorAll("[data-tfilter]").forEach(el=>el.addEventListener("click",()=>{state.tfilter=el.dataset.tfilter;render();}));
   wireConv(root);
   root.querySelectorAll("[data-char]").forEach(el=>el.addEventListener("click",()=>go({screen:"char",charId:el.dataset.char})));
