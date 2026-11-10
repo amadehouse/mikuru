@@ -80,6 +80,21 @@ const server = http.createServer(async (req, res) => {
       enqueueCover(r.id); // en arrière-plan
       return json(res, 201, { reel: r });
     }
+    // --- Tout d'un coup (chargement du site) ---
+    if (p === "/api/all" && req.method === "GET") return json(res, 200, { reels: store.list(), chars: store.listChars(), convs: store.convs.items, contents: store.contents.items });
+
+    // --- Conventions & contenus ---
+    for (const [base, create, update, col, key] of [["convs", store.createConv, store.updateConv, store.convs, "conv"], ["contents", store.createContent, store.updateContent, store.contents, "content"]]) {
+      if (p === `/api/${base}` && req.method === "GET") return json(res, 200, { [base]: col.items });
+      if (p === `/api/${base}` && req.method === "POST") { const body = JSON.parse((await readBody(req, 64 * 1024)).toString() || "{}"); return json(res, 201, { [key]: create(body, user) }); }
+      const mm = new RegExp(`^/api/${base}/([a-z0-9]+)$`).exec(p);
+      if (mm) {
+        if (!col.get(mm[1])) return err(res, 404, "not_found");
+        if (req.method === "PATCH") { const body = JSON.parse((await readBody(req, 64 * 1024)).toString() || "{}"); return json(res, 200, { [key]: update(mm[1], body, user) }); }
+        if (req.method === "DELETE") { col.remove(mm[1]); return json(res, 200, { ok: true }); }
+      }
+    }
+
     // --- Cosplan ---
     if (p === "/api/chars" && req.method === "GET") return json(res, 200, { chars: store.listChars() });
     if (p === "/api/chars" && req.method === "POST") {
