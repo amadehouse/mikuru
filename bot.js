@@ -7,7 +7,7 @@ import { enqueueCover, coverFromImageUrl } from "./lib/thumbs.js";
 
 const URL_RE = /https?:\/\/(?:www\.|vm\.|vt\.|m\.|mobile\.)?(?:tiktok\.com|instagram\.com|twitter\.com|x\.com|youtube\.com|youtu\.be)\/\S+/gi;
 const strip = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-const ALIASES = { tutorial: "tuto", tutoriel: "tuto", inspiration: "inspi", lentille: "lentilles", accessoire: "accessoires", arme: "armes", chaussure: "chaussures", collant: "collants", maquillage: "makeup", wig: "perruque", photo: "photographie", monetisation: "monetisation", beaute: "beaute", communaute: "communaute", educatif: "educatif" };
+const ALIASES = { tutorial: "tuto", tutoriel: "tuto", inspiration: "inspi", lentille: "lentilles", accessoire: "accessoires", arme: "armes", chaussure: "chaussures", collant: "collants", maquillage: "makeup", wig: "perruque", photo: "photographie", monetisation: "monetisation", beaute: "beaute", communaute: "communaute", educatif: "educatif", fanacc: "fanacc", fanedit: "fanacc", fanaccount: "fanacc", fan: "fanacc", edit: "fanacc" };
 
 function tagsFrom(text) {
   const out = { kind: [], cosplay: [], format: [] };
